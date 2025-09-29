@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/nguyenvuconghuan/Desktop/GaneCoTP/monopoly-board/src/pages",
+      "program": "/Users/nguyenvuconghuan/Desktop/GaneCoTP/monopoly-board/src/pages/build/Debug/outDebug"
+    }
+  ]
+}
