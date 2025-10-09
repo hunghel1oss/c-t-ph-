@@ -1,6 +1,7 @@
 // Bot player management for client-side UI
 
-import { gameClient } from '../services/gameClient'
+const { useState, useCallback } = require('react')
+const gameClient = require('../api/gameClient') // hypothetical API client for server communication
 
 export class BotPlayer {
   constructor(difficulty = 'medium', name = null) {

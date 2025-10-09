@@ -281,7 +281,8 @@ exports.processSquare = async (req, res) => {
                         action = { // gan action la prompt_buy va square la squareTemplate va message la ban co muon mua squareTemplate voi gia squareTemplate.price khong
                             type: 'prompt_buy',
                             square: squareTemplate,
-                            message: `Bạn có muốn mua ${squareTemplate.name} với giá ${squareTemplate.price} không?`
+                            message: `Bạn có muốn mua ${squareTemplate.name} với giá ${squareTemplate.price} không?`,
+                            nextActionEndpoint: '/game/extra/buy_square' // them endpoint cho action tiep theo
                         };
                     } else { // neu nguoi choi khong co tien tuong ung voi gia cua square
                         action = { // gan action la cannot_buy va message la ban khong du tien de mua squareTemplate 
@@ -292,63 +293,73 @@ exports.processSquare = async (req, res) => {
                 } else if (squareState.owner.toString() === playerState._id.toString()) { // neu nguoi choi la owner cua square 
                     action = { // gan action la my_property va message la squareTemplate la property cua nguoi choi
                         type: 'my_property',
-                        message: 'Đây là đất của bạn. Bạn có thể xây nhà.'
+                        message: 'Đây là đất của bạn. Bạn có thể xây nhà.',
+                        nextActionEndpoint: '/game/extra/upgrade' // them endpoint cho action tiep theo
                     };
                 } else { // neu nguoi choi khong phai owner cua square
                     action = { // gan action la pay_rent va square la squareTemplate, ownerId la owner cua square va message la nguoi choi khong phai owner cua square
                         type: 'pay_rent',
                         square: squareTemplate,
                         ownerId: squareState.owner,
-                        message: `Bạn đã dừng tại ô ${squareTemplate.name} của người khác. Bạn cần phải trả tiền thuê.`
+                        message: `Bạn đã dừng tại ô ${squareTemplate.name} của người khác. Bạn cần phải trả tiền thuê.`,
+                        nextActionEndpoint: '/game/extra/pay_rent' // them endpoint cho action tiep theo
                     };
                 }
                 break; // ket thuc switch
             case 'tax': // neu loai cua square la tax
                 action = { // gan action la tax va message la nguoi choi khong phai owner cua square
                     type: 'tax',
-                    message: 'Bạn cần phải trả tiền thuế.'
+                    message: 'Bạn cần phải trả tiền thuế.',
+                    nextActionEndpoint: '/game/extra/pay_tax' // them endpoint cho action tiep theo
                 };
                 break; // ket thuc switch
             case 'chance': // neu loai cua square la chance
                 action = { // gan action la chance va message la nguoi choi khong phai owner cua square
                     type: 'chance',
-                    message: 'Bạn đang ở ô Cơ Hội, hãy rút một lá thẻ.'
+                    message: 'Bạn đang ở ô Cơ Hội, hãy rút một lá thẻ.',
+                    nextActionEndpoint: '/game/extra/draw_card' // them endpoint cho action tiep theo
                 };
                 break;
             case 'jail':
                 action = {
                     type: 'jail',
-                    message: 'Bạn đang ở ô Tù. Bạn có thể ra khỏi tù vào lượt sau.'
+                    message: 'Bạn đang ở ô Tù. Bạn có thể ra khỏi tù vào lượt sau.',
+                    nextActionEndpoint: '/game/extra/jail' // them endpoint cho action tiep theo
                 };
                 break;
             case 'go':
                 action = {
                     type: 'start',
-                    message: 'Bạn đã đi qua ô Start và được nhận 300.'
+                    message: 'Bạn đã đi qua ô Start và được nhận 300.',
+                    nextActionEndpoint: '/game/extra/go' // them endpoint cho action tiep theo
                 };
                 break;
             case 'world_cup':
                 action = {
                     type: 'festival',
-                    message: 'Bạn đã dừng tại ô World Cup.'
+                    message: 'Bạn đã dừng tại ô World Cup.',
+                    nextActionEndpoint: '/game/extra/world_cup' // them endpoint cho action tiep theo
                 };
                 break;
             case 'go_to_plane':
                 action = {
                     type: 'plane',
-                    message: 'Bạn dang dừng tại ô Plane.'
+                    message: 'Bạn dang dừng tại ô Plane.',
+                    nextActionEndpoint: '/game/extra/plane'
                 };
                 break;
             case 'bai_bien':
                 action = {
                     type: 'railroad',
-                    message: 'Bạn dang dừng tại ô Bài Biến.'
+                    message: 'Bạn dang dừng tại ô Bài Biến.',
+                    nextActionEndpoint: '/game/extra/railroad'
                 };
                 break;
             default:
                 action = {
                     type: 'no_action',
-                    message: `Bạn đã dừng tại ô ${squareTemplate.name}.`
+                    message: `Bạn đã dừng tại ô ${squareTemplate.name}.`,   
+                    nextActionEndpoint: null
                 };
                 break;
         }
@@ -368,4 +379,3 @@ exports.processSquare = async (req, res) => {
     }
 };
 
-exports

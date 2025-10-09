@@ -8,4 +8,4 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/logout', authMiddleware.protect, authController.logout);
 
-module.exports = router;
+module.exports = router;    

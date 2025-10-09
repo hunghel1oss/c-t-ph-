@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import io from 'socket.io-client'
+const { useState, useEffect, useRef } = require('react')
+const { io } = require('socket.io-client')
 
 const SERVER_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3000'
 

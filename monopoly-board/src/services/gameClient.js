@@ -1,8 +1,8 @@
 // src/services/gameClient.js
-import { io } from 'socket.io-client';
+const { io } = require('socket.io-client')
 
 let socket = null;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
 export const gameClient = {
   // ===========================================

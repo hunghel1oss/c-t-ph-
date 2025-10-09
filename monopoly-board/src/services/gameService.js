@@ -1,9 +1,8 @@
 // src/services/gameService.js
 // Unified game service - combines socket operations and REST API calls
 
-import { gameClient } from './gameClient'
-import { api } from './api'
-
+const gameClient = require('./gameClient')
+const { api } = require('./api')
 /**
  * Game Service - Central hub for all game-related operations
  * Combines socket-based real-time operations with REST API calls
