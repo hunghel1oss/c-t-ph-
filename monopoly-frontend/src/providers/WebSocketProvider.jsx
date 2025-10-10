@@ -1,9 +1,10 @@
-import { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useState, useEffect, useCallback, useRef, useContext } from 'react';
 import PropTypes from 'prop-types';
 import { io } from 'socket.io-client';
 import { storage } from '../utils/storage';
 import { SOCKET_EVENTS } from '../config/socketEvents';
 import toast from 'react-hot-toast';
+
 
 export const WebSocketContext = createContext(null);
 
@@ -143,4 +144,12 @@ export const WebSocketProvider = ({ children }) => {
 
 WebSocketProvider.propTypes = {
   children: PropTypes.node.isRequired,
+};
+
+export const useWebSocket = () => {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocket must be used within a WebSocketProvider');
+  }
+  return context;
 };

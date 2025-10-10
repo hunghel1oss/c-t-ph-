@@ -1,292 +1,273 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useGameSocket } from '../hooks/useGameSocket';
-import { motion } from 'framer-motion';
-import Header from '../components/Header';
+import { useWebSocket } from '../providers/WebSocketProvider';
+import axios from 'axios';
 import toast from 'react-hot-toast';
-import { PET_TYPES, PET_COLORS, GAME_SETTINGS } from '../config/constants';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const Lobby = () => {
-  const { roomCode } = useParams();
-  const { user } = useAuth();
-  const { 
-    connected, 
-    gameState, 
-    setGameState,
-    startGame, 
-    leaveRoom,
-    onRoomUpdate, 
-    onGameStarted,
-    onError 
-  } = useGameSocket();
+  const location = useLocation();
   const navigate = useNavigate();
-  
-  const [selectedPet, setSelectedPet] = useState('lion');
+  const { user } = useAuth();
+  const { socket, connected } = useWebSocket();
+
+  const [gameData, setGameData] = useState(null);
   const [players, setPlayers] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [roomInfo, setRoomInfo] = useState(null);
-  
-  // Listen to room updates
+  const [loading, setLoading] = useState(true);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
+
+  // ✅ Lấy từ state (truyền từ Home khi tạo/join)
+  const gameId = location.state?.gameId;
+  const roomCode = location.state?.roomCode;
+  const playerStateId = location.state?.playerStateId;
+
+  // ✅ LOAD GAME DATA
   useEffect(() => {
-    const unsubscribeUpdate = onRoomUpdate((data) => {
-      console.log('Room update:', data);
-      setRoomInfo(data.room);
-      setPlayers(data.room.players || []);
-      setIsHost(data.room.hostId === user?.id);
-    });
-    
-    const unsubscribeStarted = onGameStarted((data) => {
-      console.log('Game started:', data);
-      toast.success('Trận đấu bắt đầu!');
-      setGameState(data.gameState);
-      navigate(`/game/${roomCode}`);
-    });
-    
-    const unsubscribeError = onError((error) => {
-      console.error('Lobby error:', error);
-      toast.error(error.message || 'Có lỗi xảy ra');
-    });
-    
-    return () => {
-      unsubscribeUpdate();
-      unsubscribeStarted();
-      unsubscribeError();
+    if (!gameId) {
+      toast.error('Không tìm thấy thông tin phòng');
+      navigate('/');
+      return;
+    }
+
+    const fetchGameData = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await axios.get(`${API_URL}/games/${gameId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+          setGameData(response.data.game);
+          setPlayers(response.data.game.players);
+          setIsHost(response.data.isHost);
+          console.log('✅ [Lobby] Game data loaded:', response.data);
+        }
+      } catch (error) {
+        console.error('❌ [Lobby] Failed to load game:', error);
+        toast.error('Không thể tải thông tin phòng');
+        navigate('/');
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [onRoomUpdate, onGameStarted, onError, user, roomCode, navigate, setGameState]);
-  
-  const handleStartGame = () => {
+
+    fetchGameData();
+  }, [gameId, navigate]);
+
+  // ✅ SOCKET: JOIN ROOM
+  useEffect(() => {
+    if (!socket || !connected || !roomCode) return;
+
+    console.log('🔌 [Lobby] Joining room:', roomCode);
+    socket.emit('join_room', { roomCode });
+
+    // ✅ LISTEN: PLAYER JOINED
+    socket.on('player_joined', (data) => {
+      console.log('👤 [Lobby] Player joined:', data);
+      setPlayers(data.players);
+      toast.success(`${data.player.userId.username} đã tham gia!`);
+    });
+
+    // ✅ LISTEN: PLAYER LEFT
+    socket.on('player_left', (data) => {
+      console.log('👋 [Lobby] Player left:', data);
+      setPlayers(data.players);
+      toast.info(`${data.player.userId.username} đã rời phòng`);
+    });
+
+    // ✅ LISTEN: GAME STARTED
+    socket.on('game_started', (data) => {
+      console.log('🎮 [Lobby] Game started:', data);
+      toast.success('Game đã bắt đầu!');
+      navigate('/game', { state: { gameId: data.gameId } });
+    });
+
+    return () => {
+      socket.off('player_joined');
+      socket.off('player_left');
+      socket.off('game_started');
+    };
+  }, [socket, connected, roomCode, navigate]);
+
+  // ✅ HANDLE: START GAME
+  const handleStartGame = async () => {
     if (!isHost) {
-      toast.error('Chỉ chủ phòng mới có thể bắt đầu');
+      toast.error('Chỉ chủ phòng mới có thể bắt đầu game!');
       return;
     }
-    
-    if (players.length < GAME_SETTINGS.MIN_PLAYERS) {
-      toast.error(`Cần ít nhất ${GAME_SETTINGS.MIN_PLAYERS} người chơi`);
+
+    if (players.length < 2) {
+      toast.error('Cần ít nhất 2 người chơi để bắt đầu!');
       return;
     }
-    
-    startGame(roomCode);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.post(
+        `${API_URL}/game/start`,
+        { gameId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        socket.emit('start_game', { roomCode, gameId });
+      }
+    } catch (error) {
+      console.error('❌ [Lobby] Start game failed:', error);
+      toast.error('Không thể bắt đầu game');
+    }
   };
-  
+
+  // ✅ HANDLE: LEAVE ROOM
   const handleLeaveRoom = () => {
-    leaveRoom(roomCode, user.id);
+    socket.emit('leave_room', { roomCode, playerStateId });
     navigate('/');
   };
-  
-  const copyRoomCode = () => {
-    navigator.clipboard.writeText(roomCode);
-    toast.success('Đã copy mã phòng!');
-  };
-  
+
+  // ✅ AVATARS
+  const avatars = [
+    { id: 'lion', name: 'Lion', emoji: '🦁' },
+    { id: 'dragon', name: 'Dragon', emoji: '🐉' },
+    { id: 'unicorn', name: 'Unicorn', emoji: '🦄' },
+    { id: 'phoenix', name: 'Phoenix', emoji: '🔥' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-graffiti-dark">
+        <div className="text-center">
+          <div className="spinner mb-4"></div>
+          <p className="text-white">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-graffiti-darker via-graffiti-dark to-graffiti-light">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-8">
-        {/* Room info */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="max-w-4xl mx-auto mb-8"
-        >
-          <div className="bg-graffiti-light rounded-2xl p-6 border-4 border-neon-yellow shadow-neon">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-game text-neon-yellow neon-text mb-2">
-                  Phòng chờ
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  {connected ? '🟢 Đã kết nối' : '🔴 Mất kết nối'}
-                </p>
-              </div>
-              
-              <div className="text-right">
-                <button
-                  onClick={copyRoomCode}
-                  className="px-6 py-3 bg-gradient-to-r from-neon-pink to-neon-purple rounded-lg text-white font-bold hover:shadow-neon transition-all mb-2"
-                >
-                  📋 {roomCode}
-                </button>
-                <p className="text-gray-400 text-xs">
-                  Click để copy mã phòng
-                </p>
-              </div>
+    <div className="min-h-screen bg-graffiti-dark p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* HEADER */}
+        <div className="bg-graffiti-card rounded-xl p-6 mb-6 border-4 border-graffiti-yellow">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-black text-graffiti-yellow mb-2">
+                PHÒNG CHỜ
+              </h1>
+              <p className="text-white text-lg">
+                Mã phòng: <span className="font-bold text-graffiti-cyan">{roomCode}</span>
+              </p>
             </div>
-            
-            {roomInfo && (
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-600">
-                <div className="text-center">
-                  <p className="text-gray-400 text-xs mb-1">Chủ phòng</p>
-                  <p className="text-neon-pink font-bold">
-                    {players.find(p => p.id === roomInfo.hostId)?.name || 'N/A'}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-400 text-xs mb-1">Thời gian</p>
-                  <p className="text-neon-blue font-bold">
-                    ⏱️ {roomInfo.duration} phút
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-400 text-xs mb-1">Người chơi</p>
-                  <p className="text-neon-green font-bold">
-                    👥 {players.length}/{GAME_SETTINGS.MAX_PLAYERS}
-                  </p>
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(roomCode);
+                toast.success('Đã copy mã phòng!');
+              }}
+              className="btn-graffiti"
+            >
+              📋 COPY MÃ
+            </button>
           </div>
-        </motion.div>
-        
-        {/* Pet selection */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="max-w-4xl mx-auto mb-8"
-        >
-          <div className="bg-graffiti-light rounded-2xl p-6 border-2 border-gray-600">
-            <h2 className="text-xl font-bold text-white mb-4">
-              🦁 Chọn linh vật của bạn
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* CHỌN LINH VẬT */}
+          <div className="bg-graffiti-card rounded-xl p-6 border-4 border-graffiti-pink">
+            <h2 className="text-2xl font-black text-graffiti-pink mb-4">
+              🎭 Chọn linh vật của bạn
             </h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {PET_TYPES.map((pet) => (
+            <div className="grid grid-cols-2 gap-4">
+              {avatars.map((avatar) => (
                 <button
-                  key={pet}
-                  onClick={() => setSelectedPet(pet)}
-                  className={`p-4 rounded-lg border-4 transition-all ${
-                    selectedPet === pet
-                      ? 'border-neon-yellow shadow-neon scale-105'
-                      : 'border-gray-600 hover:border-gray-400'
+                  key={avatar.id}
+                  onClick={() => setSelectedAvatar(avatar.id)}
+                  className={`p-6 rounded-xl border-4 transition-all ${
+                    selectedAvatar === avatar.id
+                      ? 'border-graffiti-yellow bg-graffiti-yellow/20 scale-105'
+                      : 'border-graffiti-gray hover:border-graffiti-cyan'
                   }`}
-                  style={{
-                    backgroundColor: PET_COLORS[pet] + '20',
-                  }}
                 >
-                  <div className="text-center">
-                    <div className="text-5xl mb-2">
-                      {pet === 'lion' && '🦁'}
-                      {pet === 'dragon' && '🐉'}
-                      {pet === 'unicorn' && '🦄'}
-                      {pet === 'phoenix' && '🔥'}
-                    </div>
-                    <p className="text-white font-bold text-sm capitalize">
-                      {pet}
-                    </p>
-                  </div>
+                  <div className="text-6xl mb-2">{avatar.emoji}</div>
+                  <p className="text-white font-bold">{avatar.name}</p>
                 </button>
               ))}
             </div>
           </div>
-        </motion.div>
-        
-        {/* Players list */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="max-w-4xl mx-auto mb-8"
-        >
-          <div className="bg-graffiti-light rounded-2xl p-6 border-2 border-gray-600">
-            <h2 className="text-xl font-bold text-white mb-4">
-              👥 Danh sách người chơi
+
+          {/* DANH SÁCH NGƯỜI CHƠI */}
+          <div className="bg-graffiti-card rounded-xl p-6 border-4 border-graffiti-cyan">
+            <h2 className="text-2xl font-black text-graffiti-cyan mb-4">
+              👥 Danh sách người chơi ({players.length}/4)
             </h2>
-            
             <div className="space-y-3">
               {players.map((player, index) => (
-                <motion.div
-                  key={player.id}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-graffiti-dark rounded-lg p-4 border-2 border-gray-600 flex items-center justify-between"
+                <div
+                  key={player._id}
+                  className={`p-4 rounded-lg border-2 ${
+                    index === 0
+                      ? 'border-graffiti-yellow bg-graffiti-yellow/10'
+                      : 'border-graffiti-gray'
+                  }`}
                 >
-                  <div className="flex items-center space-x-4">
-                    <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-                      style={{
-                        backgroundColor: PET_COLORS[player.pet || 'lion'],
-                        boxShadow: `0 0 20px ${PET_COLORS[player.pet || 'lion']}`,
-                      }}
-                    >
-                      {player.pet === 'lion' && '🦁'}
-                      {player.pet === 'dragon' && '🐉'}
-                      {player.pet === 'unicorn' && '🦄'}
-                      {player.pet === 'phoenix' && '🔥'}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-graffiti-purple flex items-center justify-center text-2xl">
+                        {player.userId.avatar || '👤'}
+                      </div>
+                      <div>
+                        <p className="text-white font-bold">
+                          {player.userId.username}
+                          {index === 0 && (
+                            <span className="ml-2 text-graffiti-yellow">👑 Chủ phòng</span>
+                          )}
+                        </p>
+                        <p className="text-graffiti-gray text-sm">
+                          {player.userId.email}
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div>
-                      <p className="text-white font-bold">
-                        {player.name}
-                        {player.id === roomInfo?.hostId && (
-                          <span className="ml-2 px-2 py-1 bg-neon-yellow text-black text-xs rounded">
-                            👑 Host
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-gray-400 text-xs">
-                        {player.id === user?.id ? 'Bạn' : 'Người chơi'}
-                      </p>
-                    </div>
+                    {player.userId._id === user.id && (
+                      <span className="text-graffiti-green font-bold">Bạn</span>
+                    )}
                   </div>
-                  
-                  <div className="text-right">
-                    <span className="inline-block px-3 py-1 bg-neon-green bg-opacity-20 text-neon-green rounded-full text-xs">
-                      ✓ Sẵn sàng
-                    </span>
-                  </div>
-                </motion.div>
+                </div>
               ))}
-              
-              {/* Empty slots */}
-              {Array.from({ length: GAME_SETTINGS.MAX_PLAYERS - players.length }).map((_, index) => (
+
+              {/* EMPTY SLOTS */}
+              {[...Array(4 - players.length)].map((_, index) => (
                 <div
                   key={`empty-${index}`}
-                  className="bg-graffiti-dark rounded-lg p-4 border-2 border-dashed border-gray-700 flex items-center justify-center"
+                  className="p-4 rounded-lg border-2 border-dashed border-graffiti-gray"
                 >
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-graffiti-gray text-center">
                     Đang chờ người chơi...
                   </p>
                 </div>
               ))}
             </div>
           </div>
-        </motion.div>
-        
-        {/* Actions */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="max-w-4xl mx-auto"
-        >
-          <div className="flex space-x-4">
-            {isHost && (
-              <button
-                onClick={handleStartGame}
-                disabled={players.length < GAME_SETTINGS.MIN_PLAYERS}
-                className="flex-1 py-4 px-6 bg-gradient-to-r from-neon-green to-green-600 rounded-lg text-white font-bold text-lg hover:shadow-neon-strong transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-neon"
-              >
-                🎮 Bắt đầu trận đấu
-              </button>
-            )}
-            
+        </div>
+
+        {/* ACTIONS */}
+        <div className="mt-6 flex gap-4">
+          {isHost && (
             <button
-              onClick={handleLeaveRoom}
-              className="flex-1 py-4 px-6 bg-gradient-to-r from-red-600 to-red-800 rounded-lg text-white font-bold text-lg hover:shadow-neon transition-all"
+              onClick={handleStartGame}
+              disabled={players.length < 2}
+              className="btn-graffiti flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              🚪 Rời phòng
+              🎮 BẮT ĐẦU GAME
             </button>
-          </div>
-          
-          {!isHost && (
-            <p className="text-center text-gray-400 text-sm mt-4">
-              Đang chờ chủ phòng bắt đầu trận đấu...
-            </p>
           )}
-        </motion.div>
+          <button
+            onClick={handleLeaveRoom}
+            className="btn-graffiti-secondary"
+          >
+            🚪 RỜI PHÒNG
+          </button>
+        </div>
       </div>
     </div>
   );

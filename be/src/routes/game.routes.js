@@ -12,6 +12,7 @@ router.post('/join', protect, gameController.joinGame);         // POST /api/gam
 router.post('/start', protect, gameController.startGame);       // POST /api/games/start
 router.post('/roll', protect, gameController.rollDice);         // POST /api/games/roll
 router.post('/process', protect, gameController.processSquare); // POST /api/games/process
+router.post('/gameId', protect, gameController.getGameInfo);           // POST /api/games/gameId
 
 // ================= ROOM ROUTES =================
 router.get('/rooms', protect, async (req, res) => {

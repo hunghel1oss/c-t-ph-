@@ -19,6 +19,7 @@ const roomSchema = new mongoose.Schema({
       required: true,
     },
     name: String,
+    avatar: String,
     pet: {
       type: String,
       enum: ['dog', 'cat', 'car', 'ship', null],

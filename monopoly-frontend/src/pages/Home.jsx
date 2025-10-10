@@ -73,7 +73,13 @@ const Home = () => {
         }));
         
         // Navigate to lobby
-        navigate(`/lobby/${response.roomCode}`);
+        navigate(`/lobby/${response.roomCode}`,{
+          state: {
+            gameId: response.gameId,
+            roomCode: response.roomCode,
+            playerStateId: response.playerStateId
+          }
+        });
       }
       
     } catch (error) {
@@ -145,7 +151,13 @@ const Home = () => {
         }));
         
         // Navigate to lobby
-        navigate(`/lobby/${response.roomCode}`);
+        navigate(`/lobby/${response.roomCode}`,{
+          state: {
+            gameId: response.gameId,
+            roomCode: response.roomCode,
+            playerStateId: response.playerStateId
+          }
+        });
       }
       
     } catch (error) {

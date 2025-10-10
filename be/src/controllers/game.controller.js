@@ -25,8 +25,9 @@ const generateRoomCode = async () => {
 };
 
 // ✅ TẠO GAME
+// ✅ TẠO GAME (CÓ HOST)
 exports.createGame = async (req, res) => {
-    const userId = req.user.id; // lấy từ middleware protect
+    const userId = req.user.id;
     const { duration } = req.body;
 
     const session = await mongoose.startSession();
@@ -64,6 +65,7 @@ exports.createGame = async (req, res) => {
         const newGame = new Game({
             roomCode,
             duration: duration || 20,
+            host: playerState._id, // ✅ THÊM HOST
             players: [playerState._id],
             currentTurn: playerState._id,
             status: 'waiting',
@@ -77,12 +79,31 @@ exports.createGame = async (req, res) => {
 
         await session.commitTransaction();
 
+        // ✅ POPULATE USER DATA
+        const populatedGame = await Game.findById(newGame._id)
+            .populate({
+                path: 'players',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            })
+            .populate({
+                path: 'host',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            });
+
         res.status(201).json({
             success: true,
             message: 'Game created successfully',
+            game: populatedGame, // ✅ TRẢ VỀ FULL DATA
             gameId: newGame._id,
             roomCode: newGame.roomCode,
-            playerStateId: playerState._id
+            playerStateId: playerState._id,
+            isHost: true // ✅ FLAG CHỦ PHÒNG
         });
 
     } catch (error) {
@@ -99,6 +120,7 @@ exports.createGame = async (req, res) => {
 };
 
 // ✅ JOIN GAME
+// ✅ JOIN GAME (POPULATE DATA)
 exports.joinGame = async (req, res) => {
     const userId = req.user.id;
     const { roomCode } = req.body;
@@ -142,12 +164,34 @@ exports.joinGame = async (req, res) => {
 
         await session.commitTransaction();
 
+        // ✅ POPULATE USER DATA
+        const populatedGame = await Game.findById(game._id)
+            .populate({
+                path: 'players',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            })
+            .populate({
+                path: 'host',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            });
+
+        // ✅ KIỂM TRA XEM USER CÓ PHẢI HOST KHÔNG
+        const isHost = populatedGame.host._id.toString() === playerState._id.toString();
+
         res.status(201).json({
             success: true,
             message: 'Game joined successfully',
+            game: populatedGame, // ✅ TRẢ VỀ FULL DATA
             gameId: game._id,
             roomCode: game.roomCode,
-            playerStateId: playerState._id
+            playerStateId: playerState._id,
+            isHost // ✅ FLAG CHỦ PHÒNG
         });
 
     } catch (error) {
@@ -163,6 +207,7 @@ exports.joinGame = async (req, res) => {
     }
 };
 
+
 // ✅ START GAME
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -170,6 +215,60 @@ const shuffleArray = (array) => {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+};
+
+// ✅ GET GAME INFO (DÙNG CHO LOBBY)
+exports.getGameInfo = async (req, res) => {
+    const { gameId } = req.params;
+
+    try {
+        const game = await Game.findById(gameId)
+            .populate({
+                path: 'players',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            })
+            .populate({
+                path: 'host',
+                populate: {
+                    path: 'userId',
+                    select: 'username email avatar'
+                }
+            });
+
+        if (!game) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Game not found' 
+            });
+        }
+
+        // ✅ KIỂM TRA XEM USER CÓ PHẢI HOST KHÔNG
+        const userId = req.user.id;
+        const playerState = await PlayerState.findOne({ 
+            userId, 
+            gameId: game._id 
+        });
+
+        const isHost = game.host._id.toString() === playerState._id.toString();
+
+        res.status(200).json({
+            success: true,
+            game,
+            isHost,
+            playerStateId: playerState?._id
+        });
+
+    } catch (error) {
+        console.error('❌ Get game info error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get game info',
+            error: error.message
+        });
+    }
 };
 
 exports.startGame = async (req, res) => {

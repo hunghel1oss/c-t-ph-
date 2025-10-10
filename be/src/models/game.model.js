@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 
 const gameSchema = new mongoose.Schema({
   roomCode: { type: String, unique: true, required: true },
+  host: { type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState', required: true },
   players: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState' }],
   boardState: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SquareState' }],
   currentTurn: { type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState' },
