@@ -10,621 +10,355 @@ const connectDb = async ()=>{
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('Error connecting to MongoDB:', error);
-        process.exit(1);
+        // process.exit(1);
     }
 };
 
 const squares = [
-    {
-        position: 0,
-        name: 'Go',
-        type: 'start',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 1,
-        name: 'GRANIND',
-        type: 'property',
-        price: 50,
-        rent: {
-            base: 2,
-            house1: 18,
-            house2: 38,
-            house3: 58,
-            hotel: 100,
-        },
-        buildCost: {
-            house1: 50,
-            house2: 100,
-            house3: 150,
-            hotel: 300,
-        }
-    },
-    {
-        position: 2,
-        name: 'SEVILLA',
-        type: 'property',
-        price: 60,
-        rent: {
-            base: 8,
-            house1: 36,
-            house2: 56,
-            house3: 86,
-            hotel: 150,
-        },
-        buildCost: {
-            house1: 100,
-            house2: 180,
-            house3: 250,
-            hotel: 450,
-        }
-    },
-    {
-        position: 3,
-        name: 'MADRID',
-        type: 'property',
-        price: 80,
-        rent: {
-            base: 14,
-            house1: 60,
-            house2: 100,
-            house3: 150,
-            hotel: 200,
-        },
-        buildCost: {
-            house1: 150,
-            house2: 250,
-            house3: 350,
-            hotel: 500,
-        }
-    },
-    {
-        position: 4,
-        name: 'BALI',
-        type: 'railroad',
-        price:200, 
-        rent: {
-            base: 50,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 5,
-        name: 'HONG KONG',
-        type: 'property',
-        price: 100,
-        rent: {
-            base: 30,
-            house1: 80,
-            house2: 120,
-            house3: 160,
-            hotel: 220,
-        },
-        buildCost: {
-            house1: 250,
-            house2: 350,
-            house3: 400,
-            hotel: 550,
-        }
-    },
-    {
-        position: 6,
-        name: 'THUONG HAI',
-        type: 'property',
-        price: 120,
-        rent: {
-            base: 40,
-            house1: 100,
-            house2: 140,
-            house3: 180,
-            hotel: 260,
-        },
-        buildCost: {
-            house1: 270,
-            house2: 370,
-            house3: 470,
-            hotel: 600,
-        }
-    },
-    {
-        position: 7,
-        name: 'SHANGHAI',
-        type: 'property',
-        price: 140,
-        rent: {
-            base: 50,
-            house1: 120,
-            house2: 160,
-            house3: 200,
-            hotel: 280,
-        },
-        buildCost: {
-            house1: 290,
-            house2: 390,
-            house3: 490,
-            hotel: 650,
-        }
-    },
-    {
-        position: 8,
-        name: 'PRISON',
-        type: 'jail',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 9,
-        name: 'VENEDICK',
-        type: 'property',
-        price: 160,
-        rent: {
-            base: 60,
-            house1: 140,
-            house2: 180,
-            house3: 220,
-            hotel: 300,
-        },
-        buildCost: {
-            house1: 310,
-            house2: 420,
-            house3: 450,
-            hotel: 700,
-        }
-    },
-    {
-        position: 10,
-        name: 'MILAN',
-        type: 'property',
-        price: 180,
-        rent: {
-            base: 70,
-            house1: 160,
-            house2: 200,
-            house3: 340,
-            hotel: 420,
-        },
-        buildCost: {
-            house1: 350,
-            house2: 450,
-            house3: 480,
-            hotel: 750,
-        }
-    },
-    {
-        position: 11,
-        name: 'ROMA',
-        type: 'property',
-        price: 200,
-        rent: {
-            base: 80,
-            house1: 180,
-            house2: 220,
-            house3: 360,
-            hotel: 440,
-        },
-        buildCost: {
-            house1: 380,
-            house2: 480,
-            house3: 520,
-            hotel: 800,
-        }
-    },
-    {
-        position: 12,
-        name: 'CHANCE',
-        type: 'chance',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 13,
-        name: 'HAMBURG',
-        type: 'property',
-        price: 220,
-        rent: {
-            base: 90,
-            house1: 200,
-            house2: 240,
-            house3: 380,
-            hotel: 560,
-        },
-        buildCost: {
-            house1: 400,
-            house2: 500,
-            house3: 550,
-            hotel: 850,
-        }
-    },
-    {
-        position: 14,
-        name: 'HA LONG BAY',
-        type: 'railroad',
-        price:200, 
-        rent: {
-            base: 50,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-
-    },
-    {
-        position: 15,
-        name: 'BERLIN',
-        type: 'property',
-        price: 240,
-        rent: {
-            base: 100,
-            house1: 220,
-            house2: 260,
-            house3: 400,
-            hotel: 600,
-        },
-        buildCost: {
-            house1: 450,
-            house2: 550,
-            house3: 600,
-            hotel: 900,
-        }
-    },
-    {
-        position: 16,
-        name: 'FESTVALE',
-        type: 'festival',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 17,
-        name: 'LONDON',
-        type: 'property',
-        price: 260,
-        rent: {
-            base: 110,
-            house1: 240,
-            house2: 280,
-            house3: 420,
-            hotel: 620,
-        },
-        buildCost: {
-            house1: 500,
-            house2: 600,
-            house3: 650,
-            hotel: 950,
-        }
-    },
-        {
-        position: 18,
-        name: 'DUBAI',
-        type: 'railroad',
-        price:200, 
-        rent: {
-            base: 50,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 19,
-        name: 'SIDNEY',
-        type: 'property',
-        price: 280,
-        rent: {
-            base: 130,
-            house1: 260,
-            house2: 300,
-            house3: 440,
-            hotel: 640,
-        },
-        buildCost: {
-            house1: 550,
-            house2: 650,
-            house3: 700,
-            hotel: 1000,
-        }
-    },
-    {
-        position: 20,
-        name: 'CHANCE',
-        type: 'chance',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 21,
-        name: 'CHICAGO',
-        type: 'property',
-        price: 300,
-        rent: {
-            base: 140,
-            house1: 280,
-            house2: 320,
-            house3: 460,
-            hotel: 660,
-        },
-        buildCost: {
-            house1: 600,
-            house2: 700,
-            house3: 750,
-            hotel: 1050,
-        }
-    },
-    {
-        position: 22,
-        name: 'LAS VEGAS',
-        type: 'property',
-        price: 320,
-        rent: {
-            base: 150,
-            house1: 300,
-            house2: 340,
-            house3: 480,
-            hotel: 680,
-        },
-        buildCost: {
-            house1: 700,
-            house2: 800,
-            house3: 850,
-            hotel: 1150,
-        }
-    },
-    {
-        position: 23,
-        name: 'NEW YORK',
-        type: 'property',
-        price: 340,
-        rent: {
-            base: 160,
-            house1: 350,
-            house2: 400,
-            house3: 540,
-            hotel: 740,
-        },
-        buildCost: {
-            house1: 750,
-            house2: 850,
-            house3: 900,
-            hotel: 1200,
-        }
-    },
-    {
-        position: 24,
-        name: 'GO TO PLANE',
-        type: 'plane',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 25,
-        name: 'NICE',
-        type: 'railroad',
-        price:200, 
-        rent: {
-            base: 50,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 26,
-        name: 'LYON',
-        type: 'property',
-        price: 350,
-        rent: {
-            base: 180,
-            house1: 400,
-            house2: 500,
-            house3: 600,
-            hotel: 800,
-        },
-        buildCost: {
-            house1: 800,
-            house2: 900,
-            house3: 950,
-            hotel: 1250,
-        }
-    },
-    {
-        position: 27,
-        name: 'PARIS',
-        type: 'property',
-        price: 400,
-        rent: {
-            base: 200,
-            house1: 450,
-            house2: 550,
-            house3: 650,
-            hotel: 850,
-        },
-        buildCost: {
-            house1: 850,
-            house2: 950,
-            house3: 1000,
-            hotel: 1300,
-        }
-    },
-    {
-        position: 28,
-        name: 'CHANCE',
-        type: 'chance',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 29,
-        name: 'OSAKA',
-        type: 'property',
-        price: 450,
-        rent: {
-            base: 220,
-            house1: 500,
-            house2: 600,
-            house3: 700,
-            hotel: 900,
-        },
-        buildCost: {
-            house1: 1000,
-            house2: 1100,
-            house3: 1200,
-            hotel: 1500,
-        }
-    },
-    {
-        position: 30,
-        name: 'VERGE',
-        type: 'tax',
-        price: 0,
-        rent: {
-            base: 0,
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        },
-        buildCost: {
-            house1: 0,
-            house2: 0,
-            house3: 0,
-            hotel: 0,
-        }
-    },
-    {
-        position: 31,
-        name: 'TOKYO',
-        type: 'property',
-        price: 500,
-        rent: {
-            base: 240,
-            house1: 600,
-            house2: 700,
-            house3: 800,
-            hotel: 1000,
-        },
-        buildCost: {
-            house1: 1100,
-            house2: 1200,
-            house3: 1300,
-            hotel: 1600,
-        }
-    }
+  // GO
+  {
+    position: 0,
+    type: 'go',
+    name: 'GO',
+    description: 'Collect $200',
+  },
+  
+  // Brown properties
+  {
+    position: 1,
+    type: 'property',
+    name: 'Mediterranean Avenue',
+    color: 'brown',
+    price: 60,
+    rent: [2, 10, 30, 90, 160, 250],
+    housePrice: 50,
+  },
+  {
+    position: 2,
+    type: 'community_chest',
+    name: 'Community Chest',
+  },
+  {
+    position: 3,
+    type: 'property',
+    name: 'Baltic Avenue',
+    color: 'brown',
+    price: 60,
+    rent: [4, 20, 60, 180, 320, 450],
+    housePrice: 50,
+  },
+  
+  // Tax
+  {
+    position: 4,
+    type: 'tax',
+    name: 'Income Tax',
+    amount: 200,
+  },
+  
+  // Railroad
+  {
+    position: 5,
+    type: 'railroad',
+    name: 'Reading Railroad',
+    price: 200,
+    rent: [25, 50, 100, 200],
+  },
+  
+  // Light Blue properties
+  {
+    position: 6,
+    type: 'property',
+    name: 'Oriental Avenue',
+    color: 'lightblue',
+    price: 100,
+    rent: [6, 30, 90, 270, 400, 550],
+    housePrice: 50,
+  },
+  {
+    position: 7,
+    type: 'chance',
+    name: 'Chance',
+  },
+  {
+    position: 8,
+    type: 'property',
+    name: 'Vermont Avenue',
+    color: 'lightblue',
+    price: 100,
+    rent: [6, 30, 90, 270, 400, 550],
+    housePrice: 50,
+  },
+  {
+    position: 9,
+    type: 'property',
+    name: 'Connecticut Avenue',
+    color: 'lightblue',
+    price: 120,
+    rent: [8, 40, 100, 300, 450, 600],
+    housePrice: 50,
+  },
+  
+  // Jail
+  {
+    position: 10,
+    type: 'jail',
+    name: 'Just Visiting / Jail',
+  },
+  
+  // Pink properties
+  {
+    position: 11,
+    type: 'property',
+    name: 'St. Charles Place',
+    color: 'pink',
+    price: 140,
+    rent: [10, 50, 150, 450, 625, 750],
+    housePrice: 100,
+  },
+  {
+    position: 12,
+    type: 'utility',
+    name: 'Electric Company',
+    price: 150,
+  },
+  {
+    position: 13,
+    type: 'property',
+    name: 'States Avenue',
+    color: 'pink',
+    price: 140,
+    rent: [10, 50, 150, 450, 625, 750],
+    housePrice: 100,
+  },
+  {
+    position: 14,
+    type: 'property',
+    name: 'Virginia Avenue',
+    color: 'pink',
+    price: 160,
+    rent: [12, 60, 180, 500, 700, 900],
+    housePrice: 100,
+  },
+  
+  // Railroad
+  {
+    position: 15,
+    type: 'railroad',
+    name: 'Pennsylvania Railroad',
+    price: 200,
+    rent: [25, 50, 100, 200],
+  },
+  
+  // Orange properties
+  {
+    position: 16,
+    type: 'property',
+    name: 'St. James Place',
+    color: 'orange',
+    price: 180,
+    rent: [14, 70, 200, 550, 750, 950],
+    housePrice: 100,
+  },
+  {
+    position: 17,
+    type: 'community_chest',
+    name: 'Community Chest',
+  },
+  {
+    position: 18,
+    type: 'property',
+    name: 'Tennessee Avenue',
+    color: 'orange',
+    price: 180,
+    rent: [14, 70, 200, 550, 750, 950],
+    housePrice: 100,
+  },
+  {
+    position: 19,
+    type: 'property',
+    name: 'New York Avenue',
+    color: 'orange',
+    price: 200,
+    rent: [16, 80, 220, 600, 800, 1000],
+    housePrice: 100,
+  },
+  
+  // Free Parking
+  {
+    position: 20,
+    type: 'free_parking',
+    name: 'Free Parking',
+  },
+  
+  // Red properties
+  {
+    position: 21,
+    type: 'property',
+    name: 'Kentucky Avenue',
+    color: 'red',
+    price: 220,
+    rent: [18, 90, 250, 700, 875, 1050],
+    housePrice: 150,
+  },
+  {
+    position: 22,
+    type: 'chance',
+    name: 'Chance',
+  },
+  {
+    position: 23,
+    type: 'property',
+    name: 'Indiana Avenue',
+    color: 'red',
+    price: 220,
+    rent: [18, 90, 250, 700, 875, 1050],
+    housePrice: 150,
+  },
+  {
+    position: 24,
+    type: 'property',
+    name: 'Illinois Avenue',
+    color: 'red',
+    price: 240,
+    rent: [20, 100, 300, 750, 925, 1100],
+    housePrice: 150,
+  },
+  
+  // Railroad
+  {
+    position: 25,
+    type: 'railroad',
+    name: 'B&O Railroad',
+    price: 200,
+    rent: [25, 50, 100, 200],
+  },
+  
+  // Yellow properties
+  {
+    position: 26,
+    type: 'property',
+    name: 'Atlantic Avenue',
+    color: 'yellow',
+    price: 260,
+    rent: [22, 110, 330, 800, 975, 1150],
+    housePrice: 150,
+  },
+  {
+    position: 27,
+    type: 'property',
+    name: 'Ventnor Avenue',
+    color: 'yellow',
+    price: 260,
+    rent: [22, 110, 330, 800, 975, 1150],
+    housePrice: 150,
+  },
+  {
+    position: 28,
+    type: 'utility',
+    name: 'Water Works',
+    price: 150,
+  },
+  {
+    position: 29,
+    type: 'property',
+    name: 'Marvin Gardens',
+    color: 'yellow',
+    price: 280,
+    rent: [24, 120, 360, 850, 1025, 1200],
+    housePrice: 150,
+  },
+  
+  // Go To Jail
+  {
+    position: 30,
+    type: 'go_to_jail',
+    name: 'Go To Jail',
+  },
+  
+  // Green properties
+  {
+    position: 31,
+    type: 'property',
+    name: 'Pacific Avenue',
+    color: 'green',
+    price: 300,
+    rent: [26, 130, 390, 900, 1100, 1275],
+    housePrice: 200,
+  },
+  {
+    position: 32,
+    type: 'property',
+    name: 'North Carolina Avenue',
+    color: 'green',
+    price: 300,
+    rent: [26, 130, 390, 900, 1100, 1275],
+    housePrice: 200,
+  },
+  {
+    position: 33,
+    type: 'community_chest',
+    name: 'Community Chest',
+  },
+  {
+    position: 34,
+    type: 'property',
+    name: 'Pennsylvania Avenue',
+    color: 'green',
+    price: 320,
+    rent: [28, 150, 450, 1000, 1200, 1400],
+    housePrice: 200,
+  },
+  
+  // Railroad
+  {
+    position: 35,
+    type: 'railroad',
+    name: 'Short Line',
+    price: 200,
+    rent: [25, 50, 100, 200],
+  },
+  
+  // Chance
+  {
+    position: 36,
+    type: 'chance',
+    name: 'Chance',
+  },
+  
+  // Dark Blue properties
+  {
+    position: 37,
+    type: 'property',
+    name: 'Park Place',
+    color: 'darkblue',
+    price: 350,
+    rent: [35, 175, 500, 1100, 1300, 1500],
+    housePrice: 200,
+  },
+  
+  // Luxury Tax
+  {
+    position: 38,
+    type: 'tax',
+    name: 'Luxury Tax',
+    amount: 100,
+  },
+  
+  // Boardwalk
+  {
+    position: 39,
+    type: 'property',
+    name: 'Boardwalk',
+    color: 'darkblue',
+    price: 400,
+    rent: [50, 200, 600, 1400, 1700, 2000],
+    housePrice: 200,
+  },
 ];
+
+module.exports = { squares };
+
 
 const importData = async () => {
     try {
@@ -632,10 +366,10 @@ const importData = async () => {
         await SquareTemplate.deleteMany();
         await SquareTemplate.insertMany(squares);
         console.log('Data imported successfully');
-        process.exit();
+        // process.exit();
     }catch (error) {
         console.error('Error importing data:', error);
-        process.exit(1);
+        // process.exit(1);
     }
 };
 

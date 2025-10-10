@@ -1,3 +1,5 @@
+// src/routes/index.js
+
 const auth = require('./auth.routes');
 const game = require('./game.routes');
 

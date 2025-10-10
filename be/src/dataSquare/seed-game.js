@@ -11,7 +11,7 @@ const connectDb = async ()=>{
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('Error connecting to MongoDB:', error);
-        process.exit(1);
+        // process.exit(1);
     }
 };
 
@@ -28,10 +28,10 @@ const createInitialGameData = async ()  => {
         await SquareState.deleteMany();
         await SquareState.insertMany(gameSquares);
         console.log('Data imported successfully');
-        process.exit(0);
+        // process.exit(0);
     }catch (error) {
         console.error('Error importing data:', error);
-        process.exit(1);
+        // process.exit(1);
     }
 };
 

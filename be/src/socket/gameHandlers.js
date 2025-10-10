@@ -4,7 +4,7 @@
  */
 
 const GameManager = require('../game/GameManager');
-const Rules = require('../game/Rules');
+const Rules = require('../Rulers');
 const PlayerState = require('../models/playerState.model');
 const Game = require('../models/game.model');
 const SquareState = require('../models/squareState.model');

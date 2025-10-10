@@ -3,7 +3,7 @@
  * Implements decision-making algorithms for computer players
  */
 
-const Rules = require('./Rules');
+const Rules = require('../game/Rulers');
 
 class BotAI {
   constructor(difficulty = 'medium') {

@@ -463,7 +463,7 @@ class Decks {
     // Truong hop la bai "Pay Repairs"
     async handlePayRepairs(player, data, gameState, session) {
       const PlayerState = require('../models/playerState.model'); // Import model PlayerState de cap nhat trang thai nguoi choi trong database
-      const Rules = require('./Rules'); // Import Rules de lay thong tin ve cac o ma nguoi choi so huu trong gameState
+      const Rules = require('../game/Rulers'); // Import Rules de lay thong tin ve cac o ma nguoi choi so huu trong gameState
       
       const playerProperties = Rules.getPlayerProperties(player._id, gameState); // Lay cac o ma nguoi choi so huu trong gameState
       let totalCost = 0; // Bien luu tong chi phi sua chua
