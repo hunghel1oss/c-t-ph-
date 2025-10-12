@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Righteous&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #16213e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00f0ff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Global styles */
+body {
+  margin: 0;
+  font-family: 'Righteous', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0f0e17;
+  color: #ffffff;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Animations */
+@keyframes pulse-neon {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 16, 240, 0.5),
+                0 0 40px rgba(255, 16, 240, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 16, 240, 0.8),
+                0 0 60px rgba(255, 16, 240, 0.5);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8),
+                 0 0 20px rgba(255, 215, 0, 0.6),
+                 0 0 30px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(255, 215, 0, 1),
+                 0 0 30px rgba(255, 215, 0, 0.8),
+                 0 0 40px rgba(255, 215, 0, 0.6);
+  }
+}
+
+.animate-pulse-neon {
+  animation: pulse-neon 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.neon-text {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Button effects */
+.btn-neon {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-neon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-neon:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 240, 255, 0.3);
+  border-top-color: #00f0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Board grid */
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(11, 1fr);
+  gap: 2px;
+}
+
+/* Square hover effect */
+.square-hover {
+  transition: all 0.3s ease;
+}
+
+.square-hover:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+/* Custom shadows */
+.shadow-neon {
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+}
+
+.shadow-neon-strong {
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.8),
+              0 0 60px rgba(0, 240, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .board-grid {
+    font-size: 0.7rem;
+  }
+  
+  .neon-text {
+    font-size: 1.5rem;
+  }
+}
+
+/* Utility classes */
+.text-shadow {
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.bg-graffiti-darker {
+  background-color: #0f0e17;
+}
+
+.bg-graffiti-dark {
+  background-color: #16213e;
+}
+
+.bg-graffiti-light {
+  background-color: #1a1a2e;
+}
+
+/* monopoly-frontend/src/index.css (Thêm các lớp này) */
+
+/* KÍNH MỜ CHO CARD - Dùng cho glass-card-border-pink/blue */
+.glass-card-border-pink {
+  background-color: rgba(255, 255, 255, 0.05); /* Rất mờ */
+  border: 1px solid rgba(255, 16, 240, 0.3); /* Viền mờ */
+  border-radius: 1rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px); /* Hiệu ứng blur */
+}
+
+.glass-card-border-blue {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 1rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+}
+
+/* HIỆU ỨNG LẤP LÁNH (NEON GLITTER) */
+.neon-glitter {
+  text-shadow: 
+      0 0 5px var(--neon-pink),
+      0 0 15px var(--neon-blue),
+      0 0 30px var(--neon-pink);
+  animation: neon-pulse 3s infinite alternate;
+}
+
+@keyframes neon-pulse {
+  0% {
+      text-shadow: 0 0 5px rgba(255, 16, 240, 0.5), 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+  100% {
+      text-shadow: 0 0 10px rgba(255, 16, 240, 1), 0 0 20px rgba(0, 240, 255, 1);
+  }
+}
+
+/* Thêm vào file CSS/Tailwind tùy chỉnh của bạn */
+
+/* 1. Định nghĩa Keyframes chuyển màu */
+@keyframes galaxy-glow-cycle {
+  0% {
+      color: #00F0FF; /* Neon Blue */
+      text-shadow: 0 0 10px #FF10F0, 0 0 20px #00F0FF;
+  }
+  33% {
+      color: #FF10F0; /* Neon Pink */
+      text-shadow: 0 0 10px #FFFF00, 0 0 20px #FF10F0;
+  }
+  66% {
+      color: #FFFF00; /* Neon Yellow */
+      text-shadow: 0 0 10px #FF10F0, 0 0 20px #FFFF00;
+  }
+  100% {
+      color: #00F0FF; /* Quay lại Neon Blue */
+      text-shadow: 0 0 10px #FF10F0, 0 0 20px #00F0FF;
+  }
+}
+
+/* 2. Áp dụng lớp mới */
+.logo-galaxy-animated {
+  /* Khôi phục các lớp font và kích thước */
+  font-family: var(--font-game, fantasy);
+  font-size: 8rem; /* hoặc 9xl */
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  
+  /* Áp dụng hiệu ứng chuyển động */
+  animation: 
+      galaxy-glow-cycle 10s infinite ease-in-out alternate; /* 10s cho chuyển động RẤT CHẬM và nhẹ nhàng */
+  
+  /* Đảm bảo hiệu ứng glow vẫn hoạt động tốt */
+  background: none;
+  -webkit-text-fill-color: currentcolor; 
+}

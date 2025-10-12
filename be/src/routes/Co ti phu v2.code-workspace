@@ -1,0 +1,15 @@
+// routes/Co ti phu v2.code-workspace
+
+
+	"name": "Co ti phu v2",
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../co ti phu"
+		}
+	],
+	"settings": {}
+}
