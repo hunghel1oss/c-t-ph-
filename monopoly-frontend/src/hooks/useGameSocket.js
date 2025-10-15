@@ -53,6 +53,10 @@ export const useGameSocket = () => {
     emit(SOCKET_EVENTS.GAME_START, { roomCode });
   }, [emit]);
   
+  const joinGame = useCallback((gameId, userId) => {
+    emit('join_game', { gameId, userId }); // ✅ Event backend đã có
+  }, [emit]);
+  
   /**
    * Roll dice - BẮT BUỘC dùng tên event 'roll-dice'
    */
@@ -127,6 +131,11 @@ export const useGameSocket = () => {
     return () => off(SOCKET_EVENTS.GAME_STARTED, callback);
   }, [on, off]);
   
+  const onGameJoined = useCallback((callback) => {
+    on('game:joined', callback);
+    return () => off('game:joined', callback);
+  }, [on, off]);  
+
   /**
    * Listen dice result
    */
@@ -175,6 +184,7 @@ export const useGameSocket = () => {
     joinRoom,
     leaveRoom,
     startGame,
+    joinGame,
     rollDice,
     buyProperty,
     upgradeProperty,
@@ -185,6 +195,7 @@ export const useGameSocket = () => {
     onRoomJoined,
     onRoomUpdate,
     onGameStarted,
+    onGameJoined,
     onDiceResult,
     onGameUpdate,
     onGameEnd,

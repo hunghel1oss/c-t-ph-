@@ -258,3 +258,93 @@ code {
   background: none;
   -webkit-text-fill-color: currentcolor; 
 }
+
+/* Monopoly Board Styles */
+.monopoly-board {
+  width: 600px;
+  height: 600px;
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  grid-template-rows: 80px 1fr 80px;
+  gap: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  border: 3px solid #00ffff;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+}
+
+/* Board Rows */
+.bottom-row {
+  grid-column: 1 / 4;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr) 80px;
+  gap: 1px;
+}
+
+.top-row {
+  grid-column: 1 / 4;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr) 80px;
+  gap: 1px;
+}
+
+/* Board Columns */
+.right-column {
+  grid-column: 3;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.left-column {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 1px;
+}
+
+/* Center Area */
+.board-center {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #0f3460 0%, #16213e 100%);
+  border-radius: 15px;
+  border: 2px solid rgba(0, 255, 255, 0.2);
+  margin: 10px;
+}
+
+/* Neon text effect */
+.neon-text {
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 15px currentColor,
+    0 0 20px currentColor;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .monopoly-board {
+    width: 90vmin;
+    height: 90vmin;
+  }
+}
+
+@media (max-width: 480px) {
+  .monopoly-board {
+    width: 95vmin;
+    height: 95vmin;
+  }
+  
+  .bottom-row,
+  .top-row {
+    grid-template-columns: 60px repeat(6, 1fr) 60px;
+  }
+}

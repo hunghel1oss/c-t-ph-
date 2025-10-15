@@ -22,6 +22,8 @@ export const SOCKET_EVENTS = {
   // Game Flow
   GAME_START: 'game:start',
   GAME_STARTED: 'game:started',
+  GAME_JOIN: 'game:join',
+  GAME_JOINED: 'game:joined',
   GAME_UPDATE: 'game:update',
   GAME_END: 'game:end',
   GAME_END_REQUEST: 'game:end:request',

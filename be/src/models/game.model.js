@@ -7,8 +7,8 @@ const gameSchema = new mongoose.Schema({
   players: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState' }],
   boardState: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SquareState' }],
   // 🔥 FIX: Thêm required: true vì các trường này được gán ngay khi game bắt đầu
-  currentTurn: { type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState', required: true }, 
-  turnOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState', required: true }], 
+  currentTurn: { type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState' }, 
+  turnOrder: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PlayerState' }], 
   status: { type: String, enum: ['waiting', 'in_progress', 'finished'], default: 'waiting' },
   duration: { type: Number, default: 20 }, // minutes
   winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

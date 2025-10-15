@@ -74,6 +74,68 @@ module.exports = (io) => {
       }
     });
 
+    // Existing join_room event...
+
+// ✅ THÊM EVENT NÀY
+socket.on('join_game', async ({ gameId, userId }) => {
+  try {
+    console.log('🎮 [Socket] join_game:', { gameId, userId, socketId: socket.id });
+    
+    const game = await Game.findById(gameId)
+      .populate({
+        path: 'players',
+        populate: {
+          path: 'userId',
+          select: 'username email avatar'
+        }
+      })
+      .populate('boardState');
+      
+    if (!game) {
+      socket.emit('game:error', { message: 'Game not found' });
+      return;
+    }
+    
+    const playerState = game.players.find(p => 
+      p.userId && p.userId.toString() === userId
+    );
+    
+    if (!playerState) {
+      socket.emit('game:error', { message: 'You are not a player in this game' });
+      return;
+    }
+    
+    // Join game room
+    socket.join(`game:${gameId}`);
+    
+    // Send current game state
+    socket.emit('game:joined', {
+      success: true,
+      gameState: {
+        id: game._id,
+        status: game.status,
+        currentTurn: game.currentTurn,
+        roomCode: game.roomCode,
+        playerState: game.players.map(p => ({
+          id: p._id,
+          userId: p.userId._id,
+          name: p.userId.username,
+          money: p.money,
+          position: p.position,
+          pet: p.pet,
+          ready: p.ready
+        })),
+        squareState: game.boardState || []
+      },
+      playerStateId: playerState._id
+    });
+    
+  } catch (error) {
+    console.error('❌ [Socket] join_game error:', error);
+    socket.emit('game:error', { message: error.message });
+  }
+});
+
     /**
      * PLAYER READY
      * Player chọn linh vật và sẵn sàng
