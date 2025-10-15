@@ -1,4 +1,3 @@
-
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import PropTypes from 'prop-types';
@@ -13,7 +12,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-graffiti-dark">
         <div className="text-center">
-          <div className="spinner mb-4"></div>
+          {/* Bạn có thể thêm spinner tại đây nếu có CSS */}
           <p className="text-white">Đang tải...</p>
         </div>
       </div>

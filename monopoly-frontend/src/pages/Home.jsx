@@ -1,28 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useGameSocket } from '../hooks/useGameSocket';
+import { useWebSocket } from '../providers/WebSocketProvider';
 import { gameAPI } from '../api/game.api';
 import { motion } from 'framer-motion';
 import Header from '../components/Header';
 import toast from 'react-hot-toast';
 import { DURATION_OPTIONS } from '../config/constants';
-// ✅ IMPORT GALAXY BACKGROUND VÀO TRANG HOME
 import GalaxyBackground from '../components/GalaxyBackground'; 
 
 const Home = () => {
-  // Destructure logout từ useAuth
   const { user, handleAuthError, logout } = useAuth(); 
-  const { connect, connected } = useGameSocket();
+  const { connect, connected } = useWebSocket(); 
   const navigate = useNavigate();
   
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false); // ✅ Kích hoạt Modal Tham gia Phòng
   const [selectedDuration, setSelectedDuration] = useState(20);
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Ref cho Logo (GSAP/Motion Target)
   const logoRef = useRef(null); 
   
   // Connect WebSocket
@@ -32,21 +29,21 @@ const Home = () => {
     }
   }, [user, connected, connect]);
 
-  // Wrapper xử lý lỗi Authentication
-  const handleAuthErrorWrapper = () => {
+  const handleAuthErrorWrapper = useCallback(() => {
       if (handleAuthError) {
         handleAuthError();
       } else {
         logout();
         navigate('/login');
       }
-  };
+  }, [handleAuthError, logout, navigate]);
 
   // ✅ TẠO PHÒNG
   const handleCreateRoom = async () => {
+    // Logic API...
     
     if (!user) {
-      toast.error('Chưa đăng nhập');
+      toast.error('Vui lòng đăng nhập để tạo phòng.');
       navigate('/login');
       return;
     }
@@ -63,6 +60,7 @@ const Home = () => {
     setShowCreateModal(false);
     
     try {
+      // 🚨 LƯU Ý: Lỗi E11000 sẽ xảy ra ở đây nếu chưa xóa Index DB!
       const response = await gameAPI.createRoom({ 
         duration: selectedDuration 
       });
@@ -70,14 +68,12 @@ const Home = () => {
       if (response.success) {
         toast.success(`Phòng ${response.roomCode} đã được tạo!`);
         
-        // Lưu thông tin phòng
         localStorage.setItem('currentRoom', JSON.stringify({
           roomCode: response.roomCode,
           gameId: response.gameId,
           playerStateId: response.playerStateId,
         }));
         
-        // Navigate to lobby
         navigate(`/lobby/${response.roomCode}`,{
           state: {
             gameId: response.gameId,
@@ -99,11 +95,11 @@ const Home = () => {
     }
   };
   
-  // ✅ VÀO PHÒNG
+  // ✅ VÀO PHÒNG (Logic này sẽ được gọi từ Modal)
   const handleJoinRoom = async () => {
     
     if (!user) {
-      toast.error('Chưa đăng nhập');
+      toast.error('Vui lòng đăng nhập để tham gia phòng.');
       navigate('/login');
       return;
     }
@@ -132,14 +128,12 @@ const Home = () => {
       if (response.success) {
         toast.success(`Đã vào phòng ${response.roomCode}!`);
         
-        // Lưu thông tin phòng
         localStorage.setItem('currentRoom', JSON.stringify({
           roomCode: response.roomCode,
           gameId: response.gameId,
           playerStateId: response.playerStateId,
         }));
         
-        // Navigate to lobby
         navigate(`/lobby/${response.roomCode}`,{
           state: {
             gameId: response.gameId,
@@ -161,8 +155,19 @@ const Home = () => {
     }
   };
   
+  const ActionCard = ({ title, description, icon, action, color = 'bg-blue-600' }) => (
+      <div 
+          onClick={action}
+          className={`${color} p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 cursor-pointer text-white flex flex-col items-center justify-center text-center`}
+      >
+          <i className={`bx ${icon} text-5xl mb-3`}></i>
+          <h3 className="text-2xl font-bold mb-1">{title}</h3>
+          <p className="text-sm opacity-80">{description}</p>
+      </div>
+  );
+
+
   return (
-    // ✅ LỚP NỀN: Trong suốt, để GalaxyBackground là nền
     <div className="min-h-screen relative bg-transparent"> 
       
       {/* 1. COMPONENT 3D GALAXY (Nền) */}
@@ -173,11 +178,10 @@ const Home = () => {
           
           {/* ✅ THANH HEADER KÍNH MỜ (Frosted Header) */}
           <div className="fixed top-0 w-full z-50 backdrop-blur-md bg-white/5 border-b border-white/10 shadow-xl shadow-black/50">
-             {/* Truyền ref cho Header để nó có thể áp dụng cho Logo */}
              <Header logoRef={logoRef} /> 
           </div>
           
-          <div className="container mx-auto px-4 py-12 pt-32"> {/* Tăng padding top để tránh header */}
+          <div className="container mx-auto px-4 py-12 pt-32">
               {/* Hero section */}
               <motion.div
                 initial={{ y: -50, opacity: 0 }}
@@ -186,8 +190,7 @@ const Home = () => {
               >
                 {/* ✅ TIÊU ĐỀ LOGO HUNG HUAN SIÊU ĐẸP */}
                 <h1 
-                    ref={logoRef} // Gắn ref cho hiệu ứng
-                    // Sử dụng lớp CSS tùy chỉnh cho hiệu ứng chuyển màu
+                    ref={logoRef}
                     className="text-8xl md:text-9xl tracking-widest mb-4 logo-galaxy-animated"
                     style={{ fontFamily: 'var(--font-game, fantasy)' }}
                 >
@@ -202,7 +205,6 @@ const Home = () => {
                     </p>
                     {user && (
                         <p className="text-white/70 text-sm bg-white/10 px-3 py-1 rounded-full">
-                            {/* ✅ FIX: Dùng user.name (Đã sửa) */}
                             👤 {user.name || user.email}
                         </p>
                     )}
@@ -210,47 +212,71 @@ const Home = () => {
               </motion.div>
               
               {/* Main actions - Nút Tạo Phòng / Vào Phòng */}
-              <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-10 mb-16">
+              <div className="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
                   
-                  {/* ✅ TẠO PHÒNG (GLASS CARD PINK) */}
+                  {/* 1. TẠO PHÒNG (Kích hoạt Modal Tạo Phòng) */}
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0, rotateY: 90 }}
                     animate={{ scale: 1, opacity: 1, rotateY: 0 }}
                     whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(255, 16, 240, 0.7)' }}
                     transition={{ type: 'spring', stiffness: 150, delay: 0.2 }}
-                    className="glass-card-border-pink p-10 rounded-2xl cursor-pointer relative overflow-hidden"
+                    className="glass-card-border-pink p-6 rounded-2xl cursor-pointer relative overflow-hidden flex flex-col justify-center items-center"
                     onClick={() => setShowCreateModal(true)}
                   >
                     <div className="text-center relative z-10">
-                      <span className="text-7xl block mb-4 animate-pulse">🌌</span>
-                      <h2 className="text-3xl font-bold text-neon-pink mb-2 uppercase tracking-wider">
+                      <span className="text-6xl block mb-2 animate-pulse">🌌</span>
+                      <h2 className="text-2xl font-bold text-neon-pink uppercase tracking-wider">
                         Tạo Phòng Mới
                       </h2>
-                      <p className="text-white/70 text-base font-light">
-                        Khởi tạo thế giới của riêng bạn trong ngân hà.
+                      <p className="text-white/70 text-sm font-light mt-1">
+                        Khởi tạo thế giới của riêng bạn.
                       </p>
                     </div>
                   </motion.div>
                   
-                  {/* ✅ VÀO PHÒNG (GLASS CARD BLUE) */}
+                  {/* 2. VÀO PHÒNG (Kích hoạt Modal Tham gia Phòng) */}
+                  {/* FIX: Thẻ này kích hoạt Modal Tham gia Phòng */}
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0, rotateY: 90 }}
                     animate={{ scale: 1, opacity: 1, rotateY: 0 }}
                     whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(0, 240, 255, 0.7)' }}
                     transition={{ type: 'spring', stiffness: 150, delay: 0.3 }}
-                    className="glass-card-border-blue p-10 rounded-2xl cursor-pointer relative overflow-hidden"
-                    onClick={() => setShowJoinModal(true)}
+                    className="glass-card-border-blue p-6 rounded-2xl cursor-pointer relative overflow-hidden flex flex-col justify-center items-center"
+                    onClick={() => setShowJoinModal(true)} // ✅ Kích hoạt Join Modal
                   >
                     <div className="text-center relative z-10">
-                      <span className="text-7xl block mb-4 animate-float">🪐</span>
-                      <h2 className="text-3xl font-bold text-neon-blue mb-2 uppercase tracking-wider">
-                        Vào Phòng
+                      <span className="text-6xl block mb-2 animate-float">🪐</span>
+                      <h2 className="text-2xl font-bold text-neon-blue uppercase tracking-wider">
+                        Tham Gia Phòng
                       </h2>
-                      <p className="text-white/70 text-base font-light">
+                      <p className="text-white/70 text-sm font-light mt-1">
                         Tham gia vào cuộc phiêu lưu đã có sẵn.
                       </p>
                     </div>
                   </motion.div>
+
+                  {/* 3. PhotoBooth App Card (NEW) */}
+                  <div onClick={() => navigate('/photobooth')} className="col-span-1">
+                      <div className="bg-gradient-to-br from-indigo-700 to-purple-800 p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 cursor-pointer text-white flex flex-col items-center justify-center text-center">
+                          <i className="bx bxs-camera-movie text-6xl mb-2 animate-pulse"></i>
+                          <h3 className="text-2xl font-bold mb-1">PhotoBooth</h3>
+                          <p className="text-sm opacity-80">Tạo ảnh photostrip và filter AI</p>
+                          <span className="text-xs mt-2 px-3 py-1 bg-white/20 rounded-full">Ứng dụng tích hợp</span>
+                      </div>
+                  </div>
+                    
+                  {/* 4. Leaderboard Card */}
+                  <motion.div
+                    whileHover={{ translateY: -5, scale: 1.02 }}
+                    className="bg-white/5 p-6 rounded-xl border border-gray-700 backdrop-blur-sm shadow-xl flex flex-col justify-center items-center"
+                    onClick={() => navigate('/history')}
+                  >
+                    <i className="bx bxs-trophy text-6xl mb-2 text-teal-400"></i>
+                    <h3 className="text-2xl font-bold text-teal-400 mb-1">Bảng Xếp Hạng</h3>
+                    <p className="text-gray-400 text-sm">Xem ai là Tỷ Phú giàu nhất!</p>
+                  </motion.div>
+
+
               </div>
               
               {/* Features - Cải tiến styling */}
@@ -302,7 +328,7 @@ const Home = () => {
           </div>
       </div>
       
-      {/* Create Room Modal (Giữ nguyên logic/styling cơ bản) */}
+      {/* Create Room Modal */}
       {showCreateModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm"
@@ -357,7 +383,7 @@ const Home = () => {
         </div>
       )}
       
-      {/* Join Room Modal (Giữ nguyên logic/styling cơ bản) */}
+      {/* Join Room Modal */}
       {showJoinModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm"

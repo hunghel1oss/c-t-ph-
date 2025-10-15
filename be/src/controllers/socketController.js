@@ -1,191 +1,114 @@
-const gameLogic = require('../game/gameLogic');
+const Game = require('../models/game.model'); 
+// Loại bỏ import gameLogic. Logic phức tạp nằm ngoài Socket Controller.
 
 /**
- * Handle all socket events
+ * Xử lý tất cả các sự kiện socket
+ * @param {object} io - Toàn bộ instance Socket.IO
+ * @param {object} socket - Socket của client hiện tại
  */
 const handleSocketConnection = (io, socket) => {
   
-  // ✅ 1. CREATE ROOM
-  socket.on('join_room', async ({ roomCode }) => {
+  // ✅ 1. AUTHENTICATE & JOIN ROOM (Chịu trách nhiệm join Socket Room an toàn)
+  socket.on('AUTHENTICATE_GAME', async ({ roomCode }) => {
     try {
-        console.log(`🔌 [Socket] User ${socket.userId} joining room: ${roomCode}`);
+        if (!roomCode) return console.warn('AUTHENTICATE_GAME: roomCode is missing');
 
+        console.log(`🔌 [Socket] User ${socket.userId || socket.id} attempting to join room: ${roomCode}`);
+
+        // Lấy thông tin game
         const game = await Game.findOne({ roomCode })
-            .populate({
-                path: 'players',
-                populate: {
-                    path: 'userId',
-                    select: 'username email avatar' // ✅ ĐÚNG FIELD
-                }
-            })
-            .populate({
-                path: 'host',
-                populate: {
-                    path: 'userId',
-                    select: 'username email avatar'
-                }
-            });
+            .populate('players')
+            .populate('host'); 
 
         if (!game) {
-            socket.emit('room:error', { message: 'Không tìm thấy phòng' });
+            socket.emit('room:error', { message: 'Không tìm thấy phòng game' });
             return;
         }
-
+        
+        // 1. Rời khỏi phòng cũ (Ngăn ngừa lỗi rò rỉ)
+        Array.from(socket.rooms).forEach(room => {
+            if (room !== socket.id && room !== roomCode) { 
+                socket.leave(room);
+            }
+        });
+        
+        // 2. THỰC HIỆN JOIN ROOM
         socket.join(roomCode);
-        socket.roomCode = roomCode;
+        socket.roomCode = roomCode; // Lưu roomCode vào socket instance
 
-        // ✅ EMIT ROOM UPDATE VỚI FULL DATA
-        io.to(roomCode).emit('room:update', { 
-            room: game,
-            message: `User joined room`
+        // 3. Phát sự kiện cập nhật cho cả phòng (Real-time update số người chơi)
+        io.to(roomCode).emit('GAME_UPDATED', { 
+            game: game,
+            message: `Người chơi mới đã tham gia phòng`
         });
 
-        console.log(`✅ [Socket] User joined room ${roomCode}`);
+        console.log(`✅ [Socket] User joined room ${roomCode}. Total in room: ${io.sockets.adapter.rooms.get(roomCode)?.size || 0}`);
     } catch (error) {
-        console.error('❌ [Socket] Join room failed:', error);
+        console.error('❌ [Socket] Authenticate/Join room failed:', error);
         socket.emit('room:error', { message: 'Lỗi tham gia phòng' });
     }
 });
-  // ✅ 3. START GAME
-  socket.on('game:start', async (data) => {
-    try {
-      console.log('🎮 Starting game:', data);
-      const { roomCode } = data;
+
+  // 🔥 2. CHAT REAL-TIME (Logic cốt lõi)
+  socket.on('chat:message', (data) => {
+      const roomCode = socket.roomCode;
+      if (!roomCode || !data.message) {
+          return;
+      }
       
-      const result = await gameLogic.startGame(roomCode);
+      const messageData = {
+          user: data.user, 
+          message: data.message,
+          timestamp: new Date().toISOString()
+      };
       
-      io.to(roomCode).emit('game:started', {
-        success: true,
-        gameState: result.gameState,
-      });
-    } catch (error) {
-      console.error('❌ Start game error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
-    }
+      // Phát lại tin nhắn cho tất cả client trong phòng
+      io.to(roomCode).emit('chat:message', messageData);
+      console.log(`💬 [Socket Chat] Room ${roomCode}: ${data.user.name} sent: ${data.message}`);
   });
 
-  // ✅ 4. ROLL DICE
-  socket.on('game:rollDice', async (data) => {
-    try {
-      console.log('🎲 Rolling dice:', data);
-      const { roomCode, playerId } = data;
-      
-      const result = await gameLogic.rollDice(roomCode, playerId);
-      
-      io.to(roomCode).emit('game:diceResult', {
-        playerId,
-        dice: result.dice,
-        events: result.events,
-        gameState: result.gameState,
-      });
-      
-      io.to(roomCode).emit('game:update', result.gameState);
-    } catch (error) {
-      console.error('❌ Roll dice error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
-    }
+  // ----------------------------------------------------
+  // ✅ CÁC SỰ KIỆN GAME (VÔ HIỆU HÓA RỦI RO CAO)
+  // ----------------------------------------------------
+  
+  // 💡 LƯU Ý: Các hàm này chỉ xử lý thông báo, Frontend phải gọi API HTTP
+  
+  // ✅ 3. ROLL DICE
+  socket.on('game:rollDice', () => {
+    console.warn('⚠️ [Socket] game:rollDice received. Frontend should use HTTP API.');
   });
-
-  // ✅ 5. BUY PROPERTY
-  socket.on('game:buyProperty', async (data) => {
+  
+  // ✅ 4. LEAVE ROOM (Xử lý an toàn)
+  socket.on('game:leaveRoom', (data) => {
     try {
-      console.log('🏠 Buying property:', data);
-      const { roomCode, playerId, squareIndex } = data;
+      if (!socket.roomCode) return;
       
-      const result = await gameLogic.buyProperty(roomCode, playerId, squareIndex);
+      // Xử lý logic leave room (bán nhà, xóa player) phải nằm trong API HTTP
       
-      io.to(roomCode).emit('game:update', result.gameState);
+      socket.leave(socket.roomCode);
+      socket.roomCode = null; 
       
-      socket.emit('game:actionSuccess', {
-        action: 'buy',
-        squareIndex,
-      });
-    } catch (error) {
-      console.error('❌ Buy property error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
-    }
-  });
+      // Gửi xác nhận về client để client tự chuyển hướng
+      socket.emit('game:leftRoom', { success: true, roomCode: data.roomCode });
 
-  // ✅ 6. UPGRADE PROPERTY
-  socket.on('game:upgradeProperty', async (data) => {
-    try {
-      console.log('⬆️ Upgrading property:', data);
-      const { roomCode, playerId, squareIndex } = data;
+      // Phát sự kiện thông báo rời phòng cho những người còn lại
+      io.to(data.roomCode).emit('GAME_UPDATED', { message: `Người chơi đã rời phòng` });
       
-      const result = await gameLogic.upgradeProperty(roomCode, playerId, squareIndex);
-      
-      io.to(roomCode).emit('game:update', result.gameState);
-      
-      socket.emit('game:actionSuccess', {
-        action: 'upgrade',
-        squareIndex,
-      });
-    } catch (error) {
-      console.error('❌ Upgrade property error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
-    }
-  });
-
-  // ✅ 7. SKIP ACTION
-  socket.on('game:skipAction', async (data) => {
-    try {
-      console.log('⏭️ Skipping action:', data);
-      const { roomCode, playerId } = data;
-      
-      const result = await gameLogic.skipAction(roomCode, playerId);
-      
-      io.to(roomCode).emit('game:update', result.gameState);
-    } catch (error) {
-      console.error('❌ Skip action error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
-    }
-  });
-
-  // ✅ 8. LEAVE ROOM
-  socket.on('game:leaveRoom', async (data) => {
-    try {
-      console.log('🚶 Leaving room:', data);
-      const { roomCode, userId } = data;
-      
-      const result = await gameLogic.leaveRoom(roomCode, userId);
-      
-      socket.leave(roomCode);
-      
-      io.to(roomCode).emit('game:roomUpdate', {
-        room: result.room,
-      });
-      
-      socket.emit('game:leftRoom', {
-        success: true,
-      });
     } catch (error) {
       console.error('❌ Leave room error:', error.message);
-      socket.emit('game:error', {
-        success: false,
-        message: error.message,
-      });
+      socket.emit('game:error', { success: false, message: error.message });
     }
   });
-
-  // ✅ 9. DISCONNECT
+  
+  // ✅ 5. DISCONNECT
   socket.on('disconnect', () => {
     console.log(`❌ Client disconnected: ${socket.id}`);
   });
+  
+  // ✅ 6. CÁC HÀNH ĐỘNG KHÁC (Vô hiệu hóa)
+  socket.on('game:buyProperty', () => { console.warn('Action ignored: buyProperty'); });
+  socket.on('game:upgradeProperty', () => { console.warn('Action ignored: upgradeProperty'); });
+  socket.on('game:skipAction', () => { console.warn('Action ignored: skipAction'); });
 };
 
 module.exports = { handleSocketConnection };

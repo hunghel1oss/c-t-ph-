@@ -3,7 +3,8 @@ const PlayerState = require('../models/playerState.model');
 const SquareState = require('../models/squareState.model');
 const SquareTemplate = require('../models/SquareTemplate.model');
 const Game = require('../models/game.model');
-// const { getLevelFromSquare } = require('./squareHelper'); // hàm bạn đã có
+// ✅ FIX: Import các hàm helper từ file gameHelper.js mới
+const { getLevelFromSquare, setLevelToSquare } = require('./gameHelper'); 
 
 // tính giá trị bán lại 1 property (50%)
 const calculateSellValue = (squareState, template) => {
@@ -11,6 +12,7 @@ const calculateSellValue = (squareState, template) => {
     const buildCosts = template.buildCost || {};
 
     let invested = 0;
+    // Sử dụng logic cấp độ đúng
     if (level >= 1) invested += buildCosts.house1 || 0;
     if (level >= 2) invested += buildCosts.house2 || 0;
     if (level >= 3) invested += buildCosts.house3 || 0;
@@ -23,11 +25,15 @@ const calculateSellValue = (squareState, template) => {
 // ép bán 1 property
 const forceSellProperty = async (player, squareState, session) => {
     const template = await SquareTemplate.findById(squareState.squareId).session(session);
+    if (!template) throw new Error('Square template not found during force sell');
+
     const sellValue = calculateSellValue(squareState, template);
 
     player.money += sellValue;
-    squareState.owner = null;
-    squareState.level = 0;
+    
+    // ✅ FIX: Sử dụng setLevelToSquare để đảm bảo reset level
+    setLevelToSquare(squareState, 0); 
+    squareState.owner = null; 
 
     await player.save({ session });
     await squareState.save({ session });

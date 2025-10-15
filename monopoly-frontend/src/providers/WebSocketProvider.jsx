@@ -8,14 +8,15 @@ import toast from 'react-hot-toast';
 
 export const WebSocketContext = createContext(null);
 
-// ✅ FIX: Đổi cổng mặc định từ 8000 sang 3000 (hoặc bỏ qua biến môi trường VITE_WS_URL)
-//    Mục đích: Kết nối về cùng cổng với frontend (3000) để Vite proxy chuyển hướng đến 8000.
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000'; 
+// Đã fix cứng port 8000 làm mặc định (hợp lý)
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8000'; 
 
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [gameState, setGameState] = useState(null);
+  const [gameState, setGameState] = useState(null); 
+  // 🔥 CHAT FIX: Thêm trạng thái tin nhắn
+  const [chatMessages, setChatMessages] = useState([]);
   const socketRef = useRef(null);
   
   /**
@@ -32,6 +33,8 @@ export const WebSocketProvider = ({ children }) => {
     // Nếu đã có socket, disconnect trước
     if (socketRef.current) {
       socketRef.current.disconnect();
+      // Reset tin nhắn khi disconnect
+      setChatMessages([]);
     }
     
     // Tạo socket mới với token trong query
@@ -48,20 +51,14 @@ export const WebSocketProvider = ({ children }) => {
       console.log('✅ WebSocket connected');
       setConnected(true);
       
-      // Authenticate sau khi connect (nếu backend yêu cầu)
-      newSocket.emit(SOCKET_EVENTS.AUTHENTICATE, { accessToken: token });
+      newSocket.emit(SOCKET_EVENTS.AUTHENTICATE, { token }); 
     });
     
     // Event: disconnected
     newSocket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
       console.log('❌ WebSocket disconnected:', reason);
       setConnected(false);
-      
-      // Nếu disconnect do token hết hạn, thử refresh
-      if (reason === 'io server disconnect') {
-        // Server chủ động disconnect, có thể do token hết hạn
-        // Interceptor sẽ xử lý refresh token
-      }
+      setChatMessages([]);
     });
     
     // Event: error
@@ -76,6 +73,42 @@ export const WebSocketProvider = ({ children }) => {
     return newSocket;
   }, []);
   
+  // ----------------------------------------------------
+  // ✅ FIX REAL-TIME: Xử lý các sự kiện game real-time và CHAT
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (!socket) return;
+    
+    // Lắng nghe sự kiện cập nhật game chung từ Backend
+    socket.on('GAME_UPDATED', (data) => {
+        console.log('🔄 Game state updated real-time:', data.game);
+        setGameState(data.game); 
+        
+        if (data.message) {
+            toast.success(data.message, { duration: 1500 });
+        }
+    });
+
+    // Lắng nghe sự kiện game bắt đầu
+    socket.on('GAME_STARTED', (data) => {
+        console.log('🎉 Game started real-time:', data.game);
+        setGameState(data.game);
+        toast.success('Trò chơi đã bắt đầu!');
+    });
+
+    // 🔥 CHAT FIX: Lắng nghe tin nhắn mới
+    socket.on('chat:message', (message) => {
+        setChatMessages(prevMessages => [...prevMessages, message]);
+    });
+    
+    // Cleanup listeners khi socket thay đổi hoặc component unmount
+    return () => {
+        socket.off('GAME_UPDATED');
+        socket.off('GAME_STARTED');
+        socket.off('chat:message'); // Cleanup chat listener
+    };
+  }, [socket]);
+  
   /**
    * Disconnect WebSocket
    */
@@ -86,6 +119,7 @@ export const WebSocketProvider = ({ children }) => {
       setSocket(null);
       setConnected(false);
       setGameState(null);
+      setChatMessages([]); // Reset messages
     }
   }, []);
   
@@ -129,7 +163,8 @@ export const WebSocketProvider = ({ children }) => {
     socket,
     connected,
     gameState,
-    setGameState,
+    setGameState, 
+    chatMessages, // 🔥 CHAT FIX: Export tin nhắn
     connect,
     disconnect,
     emit,

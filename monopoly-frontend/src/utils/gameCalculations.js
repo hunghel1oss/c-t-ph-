@@ -15,7 +15,7 @@ export const calculateTotalAssets = (player, squareState) => {
   if (!player || !squareState) return 0;
   
   let total = player.money || 0;
-  
+   
   // Cộng giá trị các property
   if (player.properties && player.properties.length > 0) {
     player.properties.forEach(squareIndex => {

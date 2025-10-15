@@ -1,8 +1,6 @@
-// monopoly-frontend/src/pages/Lobby.jsx (FINAL FIX)
-
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSocket } from '../contexts/SocketContext';
+import { useWebSocket } from '../providers/WebSocketProvider'; 
 import { gameAPI } from '../api/game.api';
 import toast from 'react-hot-toast';
 import { PET_TYPES } from '../config/constants';
@@ -11,18 +9,21 @@ import { useAuth } from '../hooks/useAuth';
 const Lobby = () => {
     const { roomCode } = useParams();
     const navigate = useNavigate();
-    const { socket, isConnected } = useSocket();
+    const { socket, connected, gameState, setGameState, emit, chatMessages, on, off } = useWebSocket(); 
     const { user } = useAuth();
 
-    const [players, setPlayers] = useState([]);
-    const [gameStatus, setGameStatus] = useState('waiting');
     const [isHost, setIsHost] = useState(false);
     const [currentPlayerStateId, setCurrentPlayerStateId] = useState(null);
     const [selectedPet, setSelectedPet] = useState(null);
     const [isReady, setIsReady] = useState(false);
     const [loading, setLoading] = useState(true);
     const [gameId, setGameId] = useState(null);
-    const [isStarting, setIsStarting] = useState(false); // ✅ THÊM STATE CHẶN DOUBLE-CLICK
+    const [isStarting, setIsStarting] = useState(false); 
+    const [inputMessage, setInputMessage] = useState('');
+    const messagesEndRef = useRef(null);
+
+    const players = gameState?.players || [];
+    const gameStatus = gameState?.status || 'waiting';
 
     const pets = PET_TYPES.map(pet => ({
         id: pet,
@@ -30,7 +31,15 @@ const Lobby = () => {
         emoji: pet === 'lion' ? '🦁' : pet === 'dragon' ? '🐉' : pet === 'unicorn' ? '🦄' : '🔥'
     }));
 
-    // ✅ FETCH GAME DATA BY ROOM CODE
+    // Scroll to bottom khi tin nhắn mới đến
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(scrollToBottom, [chatMessages]);
+
+
+    // ✅ FETCH GAME DATA BY ROOM CODE (Tải ban đầu)
     const fetchGameData = useCallback(async () => {
         if (!roomCode) return;
 
@@ -40,8 +49,8 @@ const Lobby = () => {
             if (response.success) {
                 const gameData = response.game;
 
-                setPlayers(gameData.players || []);
-                setGameStatus(gameData.status || 'waiting');
+                setGameState(gameData);
+
                 setIsHost(response.isHost || false);
                 setCurrentPlayerStateId(response.playerStateId);
                 setGameId(gameData._id);
@@ -54,62 +63,82 @@ const Lobby = () => {
                     setSelectedPet(currentPlayer.pet || null);
                     setIsReady(currentPlayer.ready || false);
                 }
+                
+                // Gửi sự kiện Socket sau khi tải data thành công
+                if (socket && connected) {
+                    emit('AUTHENTICATE_GAME', { roomCode });
+                }
             }
         } catch (error) {
             console.error('❌ [Lobby] Failed to load game:', error);
             toast.error(error.response?.data?.message || 'Không thể tải phòng');
-
+            
+            // FIX: Vô hiệu hóa lệnh chuyển hướng dự phòng
             if (error.response?.status === 404 || error.response?.status === 403) {
-                setTimeout(() => navigate('/'), 2000);
+                console.warn("⚠️ [Lobby] Navigation suppressed. Check Network tab for real error.");
             }
         } finally {
             setLoading(false);
         }
-    }, [roomCode, navigate]);
+    }, [roomCode, navigate, socket, connected, setGameState, emit]);
 
     // ✅ INITIAL LOAD
     useEffect(() => {
-        setLoading(true); // Đặt lại trạng thái loading khi mount
+        setLoading(true);
         fetchGameData();
     }, [fetchGameData]);
-
-    // ✅ SOCKET LISTENERS
+    
+    // ✅ SOCKET LISTENERS (Bắt sự kiện GAME_STARTED và game:leftRoom)
     useEffect(() => {
-        if (!roomCode || !socket || !isConnected) return;
+        if (!socket || !connected) return;
 
-        socket.emit('join_room', { roomCode });
-
-        const handleRoomUpdate = (data) => {
-            if (data.room) {
-                fetchGameData();
+        const handleGameStarted = (data) => {
+            if (data.game?.status === 'in_progress') {
+                toast.success('Game đã bắt đầu!');
+                navigate(`/game/${roomCode}`);
+            }
+        };
+        
+        // FIX: Xử lý sự kiện Rời phòng thành công (chuyển hướng an toàn)
+        const handleLeftRoom = (data) => {
+            if (data.success) {
+                toast.success('Đã rời phòng an toàn.');
+                navigate('/');
             }
         };
 
-        const handlePlayerReady = (data) => {
-            setPlayers(prevPlayers =>
-                prevPlayers.map(p =>
-                    p._id === data.playerStateId
-                        ? { ...p, pet: data.pet, ready: data.ready }
-                        : p
-                )
-            );
-        };
-
-        const handleGameStarted = () => {
-            toast.success('Game đã bắt đầu!');
-            navigate(`/game/${roomCode}`);
-        };
-
-        socket.on('room:update', handleRoomUpdate);
-        socket.on('player:ready', handlePlayerReady);
-        socket.on('game:started', handleGameStarted);
+        socket.on('GAME_STARTED', handleGameStarted);
+        socket.on('game:leftRoom', handleLeftRoom); 
 
         return () => {
-            socket.off('room:update', handleRoomUpdate);
-            socket.off('player:ready', handlePlayerReady);
-            socket.off('game:started', handleGameStarted);
+            socket.off('GAME_STARTED', handleGameStarted);
+            socket.off('game:leftRoom', handleLeftRoom);
         };
-    }, [roomCode, socket, isConnected, navigate, fetchGameData]);
+    }, [socket, connected, navigate, roomCode]);
+    
+    // ✅ CẬP NHẬT TRẠNG THÁI CỤC BỘ TỪ gameState (Khi Context thay đổi)
+    useEffect(() => {
+        if (gameState && currentPlayerStateId) {
+            if (gameState.status === 'in_progress') {
+                 navigate(`/game/${roomCode}`);
+                 return;
+            }
+
+            const currentPlayer = gameState.players?.find(
+                p => p._id === currentPlayerStateId
+            );
+
+            if (currentPlayer) {
+                setSelectedPet(currentPlayer.pet || null);
+                setIsReady(currentPlayer.ready || false);
+            }
+            
+            setGameId(gameState._id);
+            setIsHost(gameState.host?._id === currentPlayerStateId);
+
+        }
+    }, [gameState, currentPlayerStateId, navigate, roomCode]);
+
 
     // ✅ CHỌN LINH VẬT
     const handleSelectPet = useCallback((petId) => {
@@ -149,26 +178,16 @@ const Lobby = () => {
             });
 
             if (response.success) {
-                setIsReady(newReadyState);
+                // Backend sẽ emit GAME_UPDATED, Context sẽ lo phần cập nhật UI
                 toast.success(newReadyState ? 'Đã sẵn sàng!' : 'Đã hủy!');
-
-                if (socket && isConnected) {
-                    socket.emit('player:ready', {
-                        roomCode,
-                        playerStateId: currentPlayerStateId,
-                        pet: selectedPet,
-                        ready: newReadyState
-                    });
-                }
             }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Lỗi cập nhật');
         }
-    }, [selectedPet, isReady, roomCode, currentPlayerStateId, socket, isConnected]);
+    }, [selectedPet, isReady, roomCode, currentPlayerStateId]);
 
-    // ✅ START GAME (HOST ONLY) - FINAL FIX
+    // ✅ START GAME (HOST ONLY) - Chỉ gọi API HTTP
     const handleStartGame = useCallback(async () => {
-        // ✅ CHẶN DOUBLE-CLICK
         if (isStarting) {
             console.log('⚠️ [Lobby] Game đang bắt đầu, bỏ qua click');
             return;
@@ -190,28 +209,40 @@ const Lobby = () => {
         }
 
         try {
-            // ✅ SET LOADING STATE NGAY LẬP TỨC
             setIsStarting(true);
 
             const response = await gameAPI.startGame({ gameId });
 
             if (response.success) {
                 toast.success('Bắt đầu game...');
-
-                // ✅ GỬI SOCKET EVENT CHO GUEST
-                if (socket && isConnected) {
-                    socket.emit('game:started', { roomCode });
-                }
-
-                // ✅ CHUYỂN HƯỚNG HOST NGAY LẬP TỨC (0ms delay)
-                navigate(`/game/${roomCode}`);
+                // Backend sẽ emit GAME_STARTED, listener trong Context sẽ chuyển hướng
             }
         } catch (error) {
-            // ✅ NẾU LỖI, CHO PHÉP CLICK LẠI
             setIsStarting(false);
             toast.error(error.response?.data?.message || 'Không thể bắt đầu');
         }
-    }, [isStarting, gameId, socket, isConnected, roomCode, players, navigate]);
+    }, [isStarting, gameId, roomCode, players, navigate]);
+
+    // 🔥 CHAT FIX: Gửi tin nhắn
+    const handleSendMessage = useCallback((e) => {
+        e.preventDefault();
+        if (!inputMessage.trim() || !user || !connected) return;
+
+        const currentUserInfo = {
+            id: user.id,
+            // Đảm bảo lấy tên người dùng hiện tại (user.name từ useAuth)
+            name: user.name || 'Người chơi', 
+            avatar: user.avatar 
+        };
+
+        emit('chat:message', {
+            user: currentUserInfo,
+            message: inputMessage.trim()
+        });
+
+        setInputMessage('');
+    }, [inputMessage, user, connected, emit]);
+
 
     // ✅ COPY ROOM CODE
     const handleCopyRoomCode = useCallback(() => {
@@ -220,18 +251,20 @@ const Lobby = () => {
             .catch(() => toast.error('Lỗi copy'));
     }, [roomCode]);
 
-    // ✅ LEAVE ROOM
+    // ✅ LEAVE ROOM - Chỉ emit và chờ Listener chuyển hướng
     const handleLeaveRoom = useCallback(() => {
-        if (socket && isConnected) {
-            socket.emit('leave_room', { roomCode });
+        if (socket && connected) {
+            emit('game:leaveRoom', { roomCode, userId: user.id }); 
+        } else {
+            // Nếu không kết nối socket, chuyển hướng an toàn
+            navigate('/');
         }
-        navigate('/');
-    }, [socket, isConnected, roomCode, navigate]);
+    }, [connected, roomCode, navigate, emit, user.id, socket]);
 
     const allPlayersReady = players.length >= 2 && players.every(p => p.ready);
 
     // ✅ LOADING STATE
-    if (loading) {
+    if (loading || !gameState) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
                 <div className="text-white text-2xl">
@@ -278,7 +311,7 @@ const Lobby = () => {
                 </div>
 
                 {/* MAIN CONTENT GRID */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     {/* LEFT PANEL - PET SELECTION */}
                     <div className="lg:col-span-1">
                         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
@@ -294,7 +327,7 @@ const Lobby = () => {
                                         <button
                                             key={pet.id}
                                             onClick={() => handleSelectPet(pet.id)}
-                                            disabled={isPetTaken || isReady}
+                                            disabled={isPetTaken || isReady || gameStatus !== 'waiting'}
                                             className={`
                                                 relative p-6 rounded-xl transition-all
                                                 ${isSelected
@@ -324,10 +357,10 @@ const Lobby = () => {
 
                             <button
                                 onClick={handleToggleReady}
-                                disabled={!selectedPet}
+                                disabled={!selectedPet || gameStatus !== 'waiting'}
                                 className={`
                                     w-full mt-6 py-3 rounded-lg font-bold text-white transition-colors
-                                    ${!selectedPet
+                                    ${!selectedPet || gameStatus !== 'waiting'
                                         ? 'bg-gray-400 cursor-not-allowed'
                                         : isReady
                                             ? 'bg-red-500 hover:bg-red-600'
@@ -335,19 +368,22 @@ const Lobby = () => {
                                     }
                                 `}
                             >
-                                {!selectedPet
-                                    ? '⚠️ Chọn linh vật'
-                                    : isReady
-                                        ? '❌ HỦY SẴN SÀNG'
-                                        : '✅ SẴN SÀNG'
+                                {gameStatus !== 'waiting'
+                                    ? '⛔ Game đã bắt đầu'
+                                    : !selectedPet
+                                        ? '⚠️ Chọn linh vật'
+                                        : isReady
+                                            ? '❌ HỦY SẴN DÀNG'
+                                            : '✅ SẴN DÀNG'
                                 }
                             </button>
                         </div>
                     </div>
 
-                    {/* RIGHT PANEL - PLAYERS LIST */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
+                    {/* PLAYER LIST & CHAT */}
+                    <div className="lg:col-span-3 grid grid-cols-2 gap-8">
+                        {/* PLAYERS LIST */}
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 col-span-2 md:col-span-1">
                             <h2 className="text-2xl font-bold text-white mb-4">
                                 👥 Người Chơi ({players.length}/4)
                             </h2>
@@ -460,6 +496,49 @@ const Lobby = () => {
                                     </p>
                                 </div>
                             )}
+                        </div>
+
+                        {/* CHAT BOX */}
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 col-span-2 md:col-span-1 flex flex-col h-[600px] lg:h-auto">
+                            <h2 className="text-2xl font-bold text-white mb-4">💬 Chat</h2>
+                            
+                            {/* Message Display Area */}
+                            <div className="flex-grow overflow-y-auto space-y-3 p-2 bg-black/10 rounded-lg mb-4" style={{ maxHeight: '450px' }}>
+                                {chatMessages.length === 0 ? (
+                                    <p className="text-white/50 text-center pt-10">Bắt đầu trò chuyện!</p>
+                                ) : (
+                                    chatMessages.map((msg, index) => (
+                                        <div key={index} className="flex flex-col">
+                                            <div className={`text-sm ${msg.user.id === user.id ? 'text-blue-300' : 'text-yellow-300'} font-bold`}>
+                                                {msg.user.name}:
+                                            </div>
+                                            <p className="text-white break-words text-base">
+                                                {msg.message}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                                <div ref={messagesEndRef} />
+                            </div>
+
+                            {/* Message Input Form */}
+                            <form onSubmit={handleSendMessage} className="flex gap-2 mt-auto">
+                                <input
+                                    type="text"
+                                    value={inputMessage}
+                                    onChange={(e) => setInputMessage(e.target.value)}
+                                    placeholder={connected ? "Nhập tin nhắn..." : "Đang kết nối..."}
+                                    disabled={!connected}
+                                    className="flex-grow p-3 rounded-lg bg-white/20 text-white placeholder-white/50 focus:ring-2 focus:ring-blue-500 focus:bg-white/30 transition duration-150"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!connected || !inputMessage.trim()}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-bold transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                                >
+                                    Gửi
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
